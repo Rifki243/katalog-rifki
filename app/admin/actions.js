@@ -248,7 +248,7 @@ export async function hapusProduk(id) {
 
 const PANJANG_NAMA_MAKS = 200;
 const PANJANG_KATEGORI_MAKS = 100;
-const MAX_TOKENS = 400;
+const MAX_TOKENS = 200;
 const BATAS_WAKTU_AI = 20000;
 
 export async function buatDeskripsiAI(input) {
@@ -265,55 +265,85 @@ export async function buatDeskripsiAI(input) {
       };
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    const model = process.env.ANTHROPIC_MODEL;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL;
 
     if (!apiKey || !model) {
       return {
         error:
-          "Fitur AI belum diatur. Minta pemilik proyek mengisi ANTHROPIC_API_KEY dan ANTHROPIC_MODEL di environment variable lalu deploy ulang.",
+          "Fitur AI belum diatur. Minta pemilik proyek mengisi GEMINI_API_KEY dan GEMINI_MODEL di environment variable lalu deploy ulang.",
       };
     }
 
-    const instruksi = [
-      "Tulis deskripsi produk untuk katalog toko kecil dalam bahasa Indonesia.",
-      `Nama produk: ${nama}.`,
-      `Kategori: ${kategori || "-"}.`,
-      "Tulis 1 sampai 2 kalimat, singkat dan jelas, gaya bahasa Indonesia sehari-hari.",
-      "Jangan mengarang klaim yang tidak ada di informasi di atas, misalnya halal, BPOM, bahan, atau asal-usul produk.",
-      "Balas hanya dengan teks deskripsi, tanpa judul atau tanda kutip.",
+    const instruksiSistem = [
+      "Tulis deskripsi produk untuk katalog toko kecil.",
+      "Tulis 1 sampai 2 kalimat dalam bahasa Indonesia yang singkat dan jelas.",
+      "Jangan mengarang klaim yang tidak ada di input, misalnya halal, BPOM, atau bahan.",
+      "Balas hanya dengan teks deskripsi, tanpa pembuka dan tanpa tanda kutip.",
     ].join("\n");
+
+    const pesanPengguna = `Nama produk: ${nama}.\nKategori: ${kategori || "-"}.`;
 
     const pengendali = new AbortController();
     const batas = setTimeout(() => pengendali.abort(), BATAS_WAKTU_AI);
 
     try {
-      const respons = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: MAX_TOKENS,
-          messages: [{ role: "user", content: instruksi }],
-        }),
-        signal: pengendali.signal,
-      });
+      const respons = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: instruksiSistem }] },
+            contents: [{ role: "user", parts: [{ text: pesanPengguna }] }],
+            generationConfig: { maxOutputTokens: MAX_TOKENS },
+          }),
+          signal: pengendali.signal,
+        }
+      );
 
       if (!respons.ok) {
+        if (respons.status === 429) {
+          return {
+            error:
+              "Kuota AI habis atau terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
+          };
+        }
+        if (respons.status === 400 || respons.status === 401 || respons.status === 403) {
+          return {
+            error:
+              "API key Gemini ditolak. Periksa nilai GEMINI_API_KEY di environment variable.",
+          };
+        }
         return {
           error: `Gagal membuat deskripsi (kode ${respons.status}). Coba lagi nanti.`,
         };
       }
 
       const data = await respons.json();
-      const teks = data?.content?.[0]?.text?.trim();
+      const kandidat = data?.candidates?.[0];
+      const teks = kandidat?.content?.parts
+        ?.map((bagian) => bagian?.text || "")
+        .join(" ")
+        .trim();
 
       if (!teks) {
-        return { error: "AI tidak mengembalikan teks. Coba lagi." };
+        const alasan =
+          data?.promptFeedback?.blockReason ||
+          (kandidat?.finishReason && kandidat.finishReason !== "STOP"
+            ? kandidat.finishReason
+            : null);
+
+        if (alasan) {
+          return {
+            error: `Hasil diblokir filter keamanan (${alasan}). Coba ubah nama atau kategori lalu coba lagi.`,
+          };
+        }
+
+        return { error: "Respons AI kosong. Coba lagi." };
       }
 
       return { deskripsi: teks };
