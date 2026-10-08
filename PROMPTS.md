@@ -10,7 +10,7 @@ Ubah app/page.jsx supaya daftar produk diambil dari tabel "produk" di Supabase, 
 
 Tampilkan produk dengan komponen KartuProduk yang sudah ada, tanpa mengubah tampilannya. Kalau gagal mengambil data, tampilkan pesan error yang jelas di halaman. Kalau tabel kosong, tampilkan tulisan "Belum ada produk". Hapus CatatanBelumAktif dari halaman ini.**
 
-**Hasil: **
+**Hasil: app/page.jsx (Server Component, dynamic force-dynamic) mengambil semua produk dari tabel produk memakai koneksi server di lib/supabase/server.js (SUPABASE_URL + SUPABASE_SECRET_KEY, dibuat lewat index.js), diurutkan per id, lalu dirender dengan KartuProduk tanpa mengubah tampilannya. Gagal mengambil data → kotak "Gagal memuat produk" berisi pesan error; tabel kosong → tulisan "Belum ada produk"; CatatanBelumAktif sudah dihapus.**
 
 **Perbaikan: perbaikan pada page.jsx, index.js dan server.js**
 
@@ -20,9 +20,9 @@ Tampilkan produk dengan komponen KartuProduk yang sudah ada, tanpa mengubah tamp
 
 Ubah app/produk/[id]/page.jsx supaya mengambil satu produk dari tabel "produk" di Supabase berdasarkan id di URL, di sisi server, memakai koneksi Supabase yang sudah dibuat di lib/supabase. Kalau produk tidak ditemukan, panggil notFound(). Jangan ubah tampilannya. Hapus CatatanBelumAktif dari halaman ini, tapi biarkan tombol WhatsApp.**
 
-**Hasil:**
+**Hasil: app/produk/[id]/page.jsx mengambil satu produk berdasarkan id (params di-await) di Server Component dengan koneksi lib/supabase; tidak ditemukan atau id tidak valid → notFound(). Tampilan tidak berubah: foto, kategori, nama, harga format rupiah, deskripsi, dan TombolWhatsApp tetap; CatatanBelumAktif sudah dihapus.**
 
-**Perbaikan:**
+**Perbaikan: tidak ada; id yang tidak ada langsung berakhir di notFound() lewat maybeSingle.**
 
 ## US-03 Pesan via WhatsApp
 
@@ -30,9 +30,9 @@ Ubah app/produk/[id]/page.jsx supaya mengambil satu produk dari tabel "produk" d
 
 Ubah components/TombolWhatsApp.jsx menjadi tautan yang membuka https://wa.me/ ke nomor di lib/toko.js, dengan pesan otomatis berisi nama dan harga produk dalam format rupiah. Pesan di-encode dengan encodeURIComponent dan dibuka di tab baru. Pertahankan tampilan tombolnya. Hapus CatatanBelumAktif yang menyebut US-03 di halaman detail produk.**
 
-**Hasil:**
+**Hasil: components/TombolWhatsApp.jsx menjadi tautan https://wa.me/<nomor>?text=<pesan>, nomor diambil dari lib/toko.js, pesan berisi nama + harga format rupiah dan di-encode dengan encodeURIComponent, dibuka di tab baru (target _blank, rel noopener noreferrer). Tampilan tombol dipertahankan; CatatanBelumAktif di halaman detail sudah dihapus.**
 
-**Perbaikan:**
+**Perbaikan: tidak ada; format pesan dan nomor mengikuti docs/rancangan-teknis.md.**
 
 ## US-04 Login admin
 
@@ -40,9 +40,9 @@ Ubah components/TombolWhatsApp.jsx menjadi tautan yang membuka https://wa.me/ ke
 
 Buat login admin memakai Supabase Auth (email dan password) dengan @supabase/ssr dan cookie, memakai SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY. Login diproses dengan Server Action di app/admin/actions.js dan disambungkan ke form di app/admin/login/page.jsx. Login berhasil diarahkan ke /admin; login gagal menampilkan pesan error yang jelas di halaman login. Buat juga tombol "Keluar" di components/NavAdmin.jsx berfungsi: mengakhiri sesi lalu kembali ke /admin/login. Jangan ubah tampilan. Hapus CatatanBelumAktif dari halaman login.**
 
-**Hasil:**
+**Hasil: Server Action login di app/admin/actions.js memakai supabase.auth.signInWithPassword lewat koneksi sesi (@supabase/ssr + cookie di lib/supabase/session.js, SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY). Berhasil → redirect /admin; gagal → pesan "Email atau password salah". Tombol Keluar di NavAdmin memanggil Server Action logout (signOut) lalu redirect /admin/login. Form login memakai useActionState; CatatanBelumAktif sudah dihapus.**
 
-**Perbaikan:**
+**Perbaikan: tidak ada; pesan gagal dibuat umum supaya tidak membocorkan akun mana yang terdaftar.**
 
 ## US-05 Ganti password
 
@@ -50,9 +50,9 @@ Buat login admin memakai Supabase Auth (email dan password) dengan @supabase/ssr
 
 Buat Server Action ganti password di app/admin/actions.js untuk admin yang sedang login, memakai Supabase Auth. Validasi di server: password baru minimal 8 karakter dan harus sama dengan konfirmasi. Tampilkan pesan berhasil atau pesan error yang jelas di halaman. Sambungkan ke form di app/admin/password/page.jsx tanpa mengubah tampilannya. Hapus CatatanBelumAktif dari halaman ini.**
 
-**Hasil:**
+**Hasil: Server Action gantiPassword di app/admin/actions.js memvalidasi di server (password baru minimal 8 karakter, harus sama dengan konfirmasi), memastikan sesi admin lewat auth.getUser, lalu auth.updateUser({ password }); sukses → pesan "Password berhasil diganti", gagal → pesan error. Form di app/admin/password/page.jsx memakai useActionState dan menampilkan pesan tanpa mengubah tampilan; CatatanBelumAktif sudah dihapus.**
 
-**Perbaikan:**
+**Perbaikan: tidak ada; validasi dijalankan di server sebelum memanggil Supabase Auth.**
 
 ## US-06 Proteksi halaman admin
 
@@ -60,9 +60,9 @@ Buat Server Action ganti password di app/admin/actions.js untuk admin yang sedan
 
 Buat file proxy.js di root proyek (Next.js 16). Semua rute /admin kecuali /admin/login wajib login dengan Supabase Auth; kalau belum login, alihkan ke /admin/login. Pastikan juga setiap Server Action yang mengubah data memeriksa login di server. Hapus CatatanBelumAktif dari halaman /admin.**
 
-**Hasil:**
+**Hasil: proxy.js di root proyek (pengganti middleware.js) dengan matcher /admin dan /admin/:path*: belum login → redirect /admin/login, sudah login dan membuka /admin/login → redirect /admin; koneksi memakai SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY dengan cookie request. Setiap Server Action yang mengubah data juga memeriksa login di server. CatatanBelumAktif dari /admin dihapus; terverifikasi lewat smoke test: semua rute /admin tanpa cookie menghasilkan alihkan 307 ke /admin/login.**
 
-**Perbaikan:**
+**Perbaikan: tidak ada; proxy.js juga mengekspor alias middleware.js supaya kompatibel.**
 
 ## Debugging dan fitur bonus
 
@@ -74,9 +74,9 @@ Tambahkan bagian baru untuk setiap error yang kamu perbaiki atau fitur bonus yan
 
 Ubah halaman /admin supaya menampilkan daftar produk dari tabel produk di Supabase (ambil di Server Component, urut dari yang terbaru), bukan lagi dari lib/data-contoh.js. Tampilkan lewat komponen TabelProduk yang sudah ada. Tambahkan tampilan saat belum ada produk dan pesan error yang jelas kalau pengambilan data gagal. Hapus CatatanBelumAktif dari halaman /admin yang berkaitan dengan fitur ini.**
 
-**Hasil:**
+**Hasil: halaman /admin (Server Component) mengambil produk dari tabel produk lewat koneksi sesi admin (RLS aktif), diurutkan created_at terbaru, dan dirender lewat komponen TabelProduk; belum ada produk → "Belum ada produk", gagal mengambil data → kotak "Gagal memuat produk". lib/data-contoh.js tidak dipakai lagi; tautan "Tambah produk" ditampilkan di kepala halaman; CatatanBelumAktif sudah dihapus.**
 
-**Perbaikan:**
+**Perbaikan: redirect() dari pengecekan login di server dilewatkan dari blok try/catch (cek digest NEXT_REDIRECT) supaya alihkan ke /admin/login tidak berubah jadi pesan error.**
 
 ## US-08 Tambah produk (harus terkunci login)
 
@@ -146,7 +146,7 @@ Di FormProduk, tambahkan tombol "Buat deskripsi dengan AI" di dekat isian deskri
 
 API key dibaca dari GEMINI_API_KEY dan nama model dari GEMINI_MODEL (tanpa awalan NEXT_PUBLIC_, jangan ditulis di kode); tambahkan keduanya ke .env.example dengan nilai kosong. Batasi panjang input, atur maxOutputTokens secukupnya, dan beri batas waktu permintaan. Tangani kasus gagal dengan pesan yang jelas: API key salah atau kosong, kuota habis (HTTP 429), respons kosong atau diblokir filter keamanan, dan timeout. Tampilkan status "Sedang membuat deskripsi..." saat memproses. Hasilnya masuk ke isian deskripsi sebagai draf yang masih bisa diedit, dan baru tersimpan saat admin menekan "Simpan produk". Hapus CatatanBelumAktif dari halaman yang fiturnya selesai.**
 
-**Hasil: tombol "Buat deskripsi dengan AI" di FormProduk (type button, dekat isian deskripsi) memanggil Server Action buatDeskripsiAI: cek login dulu, baca ANTHROPIC_API_KEY dan ANTHROPIC_MODEL dari environment variable (ditambahkan ke .env.example dengan nilai kosong), fetch langsung https://api.anthropic.com/v1/messages tanpa SDK. Instruksi AI: 1-2 kalimat bahasa Indonesia, jangan mengarang klaim halal/BPOM/bahan. Input dibatasi (nama 200, kategori 100 karakter), max_tokens 400, timeout 20 detik, status "Sedang membuat deskripsi..." tampil saat proses, error ditampilkan dengan pesan jelas. Hasil masuk isian deskripsi sebagai draf yang bisa diedit dan baru tersimpan saat "Simpan produk".**
+**Hasil: tombol "Buat deskripsi dengan AI" di FormProduk (type button, dekat isian deskripsi) memanggil Server Action buatDeskripsiAI: cek login dulu, lalu fetch langsung POST ke https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent (tanpa SDK/paket baru), API key lewat header x-goog-api-key (bukan query string), instruksi lewat systemInstruction (deskripsi 1-2 kalimat bahasa Indonesia, jangan mengarang klaim halal/BPOM/bahan, balas hanya teks deskripsi), input hanya nama (maks 200) dan kategori (maks 100), generationConfig maxOutputTokens 200, timeout 20 detik. Hasil dibaca dari candidates[0].content.parts[0].text. Env GEMINI_API_KEY dan GEMINI_MODEL dibaca dari .env.local dan ditambahkan ke .env.example (nilai kosong, tanpa NEXT_PUBLIC_). Error ditangani dengan pesan jelas: env kosong, API key ditolak (400/401/403), kuota habis (429), respons kosong atau diblokir filter keamanan (blockReason/finishReason), dan timeout. Status "Sedang membuat deskripsi..." tampil saat proses; hasil masuk isian deskripsi sebagai draf yang bisa diedit dan baru tersimpan saat "Simpan produk".**
 
-**Perbaikan: US-14 di docs/user-stories.md menyebut Gemini API tetapi prompt meminta Claude API; dikonfirmasi pakai Claude API. Tombol AI dinonaktifkan selama form sedang dikirim supaya tidak bentrok.**
+**Perbaikan: prompt US-14 diubah dari Claude ke Gemini API (sejalan dengan docs/user-stories.md); seluruh kode lama (ANTHROPIC_API_KEY/ANTHROPIC_MODEL, api.anthropic.com, max_tokens) diganti bersih sampai tidak ada sisa. Uji langsung ke Gemini API memakai key & model di .env.local: HTTP 200, deskripsi terhasilkan (model gemini-flash-lite-latest). Tombol AI dinonaktifkan selama form sedang dikirim supaya tidak bentrok.**
 
