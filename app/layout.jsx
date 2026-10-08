@@ -1,6 +1,7 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import DaftarkanServiceWorker from "@/components/DaftarkanServiceWorker";
 import { toko } from "@/lib/toko";
 
 export const metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
+        <DaftarkanServiceWorker />
         <Header />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
         <Footer />

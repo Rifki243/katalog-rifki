@@ -1,10 +1,14 @@
 import { toko } from "@/lib/toko";
 import { formatRupiah } from "@/lib/format";
 
-export default function TombolWhatsApp({ produk }) {
+export default function TombolWhatsApp({ produk, jumlah = 1 }) {
   if (!produk) return null;
 
-  const pesan = `Halo, saya ingin memesan ${produk.nama} seharga ${formatRupiah(produk.harga)}.`;
+  const total = produk.harga * jumlah;
+  const pesan =
+    jumlah > 1
+      ? `Halo, saya ingin memesan ${jumlah} ${produk.nama} dengan total ${formatRupiah(total)}.`
+      : `Halo, saya ingin memesan ${produk.nama} seharga ${formatRupiah(produk.harga)}.`;
   const href = `https://wa.me/${toko.nomorWhatsApp}?text=${encodeURIComponent(pesan)}`;
 
   return (
